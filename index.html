@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Aplikasi Penentu Awal dan Akhir Bulan Hijriah</title>
+    <style>
+        :root {
+            --space-bg: #0b132b;
+            --space-card: #1c2541;
+            --cosmic-teal: #00b4d8;
+            --gold-star: #f1c40f;
+            --green-ok: #8cff00;
+            --red-warn: #ff6b6b;
+            --text-light: #f5f7fa;
+            --text-muted: #a0aec0;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: radial-gradient(circle at center, #1c2541 0%, #0b132b 100%);
+            color: var(--text-light);
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            position: relative;
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            background-image:
+                radial-gradient(white, rgba(255,255,255,.2) 2px, transparent 40px),
+                radial-gradient(white, rgba(255,255,255,.15) 1px, transparent 30px),
+                radial-gradient(white, rgba(255,255,255,.1) 2px, transparent 40px);
+            background-size: 550px 550px, 350px 350px, 250px 250px;
+            background-position: 0 0, 40px 60px, 130px 270px;
+            opacity: 0.24;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        .container {
+            max-width: 760px;
+            margin: 34px auto;
+            background: rgba(28, 37, 65, 0.88);
+            padding: 38px 30px;
+            border-radius: 18px;
+            box-shadow: 0 8px 32px rgba(0, 180, 216, 0.22);
+            border: 1px solid rgba(0, 180, 216, 0.32);
+            backdrop-filter: blur(8px);
+        }
+
+        .header-wrapper {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .telescope-icon {
+            width: 74px;
+            height: 74px;
+            margin: 0 auto 15px;
+            background: rgba(0, 180, 216, 0.1);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid var(--cosmic-teal);
+            box-shadow: 0 0 18px rgba(0, 180, 216, 0.4);
+        }
+
+        h1 {
+            color: var(--text-light);
+            margin: 0 0 8px;
+            font-size: 27px;
+            letter-spacing: 0.3px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+
+        p.subtitle {
+            color: var(--cosmic-teal);
+            margin: 0;
+            font-size: 14px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        p.author-credit {
+            color: var(--gold-star);
+            margin: 7px 0 0;
+            font-size: 13px;
+            font-weight: 600;
+            letter-spacing: 1px;
+            text-shadow: 0 0 8px rgba(241, 196, 15, 0.3);
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 18px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group.full {
+            grid-column: 1 / -1;
+        }
+
+        label {
+            display: block;
+            font-weight: 650;
+            margin-bottom: 8px;
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+
+        select,
+        input[type="number"],
+        button {
+            width: 100%;
+            padding: 14px;
+            border: 2px solid rgba(0, 180, 216, 0.22);
+            border-radius: 10px;
+            font-size: 16px;
+            background-color: #0b132b;
+            color: var(--text-light);
+            transition: all 0.25s ease;
+        }
+
+        select:focus,
+        input[type="number"]:focus {
+            border-color: var(--cosmic-teal);
+            box-shadow: 0 0 10px rgba(0, 180, 216, 0.3);
+            outline: none;
+        }
+
+        option {
+            background-color: var(--space-card);
+            color: var(--text-light);
+        }
+
+        button {
+            background: linear-gradient(135deg, var(--cosmic-teal) 0%, #0077b6 100%);
+            color: white;
+            border: none;
+            font-weight: 800;
+            cursor: pointer;
+            margin-top: 4px;
+            letter-spacing: 0.4px;
+            box-shadow: 0 4px 15px rgba(0, 180, 216, 0.34);
+        }
+
+        button:hover {
+            background: linear-gradient(135deg, #00c4fd 0%, #00b4d8 100%);
+            box-shadow: 0 6px 20px rgba(0, 180, 216, 0.5);
+            transform: translateY(-1px);
+        }
+
+        .note {
+            margin-top: -6px;
+            margin-bottom: 18px;
+            padding: 12px 14px;
+            border-radius: 10px;
+            background: rgba(0, 180, 216, 0.08);
+            border: 1px solid rgba(0, 180, 216, 0.2);
+            color: #cbd5e1;
+            font-size: 13.5px;
+        }
+
+        .result-box {
+            margin-top: 34px;
+            padding: 25px;
+            border-radius: 12px;
+            background: rgba(11, 19, 43, 0.92);
+            border-left: 6px solid var(--cosmic-teal);
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.45);
+            display: none;
+        }
+
+        .result-title {
+            font-weight: 800;
+            font-size: 19px;
+            color: var(--cosmic-teal);
+            margin-bottom: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 9px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .result-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 14px;
+        }
+
+        .result-item {
+            padding: 14px 15px;
+            background: rgba(255,255,255,0.035);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 10px;
+        }
+
+        .result-item span.label {
+            font-weight: 650;
+            color: var(--text-muted);
+            font-size: 14px;
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        .date-display {
+            font-size: 17px;
+            color: var(--text-light);
+        }
+
+        .date-display strong { color: #ffffff; }
+        .date-display small { color: #cbd5e1; }
+
+        .conclusion-box {
+            margin-top: 22px;
+            padding: 18px;
+            background: rgba(241, 196, 15, 0.07);
+            border: 1px dashed rgba(241, 196, 15, 0.43);
+            border-radius: 10px;
+        }
+
+        .conclusion-title {
+            font-weight: 800;
+            color: var(--gold-star);
+            margin-bottom: 6px;
+            font-size: 15px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .conclusion-text {
+            font-size: 14.5px;
+            color: #e2e8f0;
+            text-align: justify;
+        }
+
+        .status-ok { color: var(--green-ok); font-weight: 700; }
+        .status-warn { color: var(--gold-star); font-weight: 700; }
+        .status-error { color: var(--red-warn); font-weight: 700; }
+
+        @media (max-width: 640px) {
+            body { padding: 12px; }
+            .container { margin: 14px auto; padding: 28px 18px; }
+            h1 { font-size: 22px; }
+            .form-grid { grid-template-columns: 1fr; gap: 0; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header-wrapper">
+        <div class="telescope-icon" aria-hidden="true">
+            <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="#00b4d8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M10.08 8.16l7.76-4.48a2 2 0 0 1 2.73.73l.73 1.27a2 2 0 0 1-.73 2.73l-7.76 4.48"></path>
+                <path d="M4 17l6-3.46"></path>
+                <path d="M14 11.27l1.42 2.45"></path>
+                <path d="M9 14.5l-5 6.5"></path>
+                <path d="M13 12.2l5 8.8"></path>
+            </svg>
+        </div>
+        <h1>Penentuan Awal & Akhir Bulan Hijriah</h1>
+        <p class="author-credit">DIBUAT OLEH: M. SHOLEH BAKHRUDDIN</p>
+    </div>
+
+    <div class="form-grid">
+        <div class="form-group">
+            <label for="bulanHijriah">Pilih Bulan Hijriah:</label>
+            <select id="bulanHijriah">
+                <option value="1">Muharram</option>
+                <option value="2">Safar</option>
+                <option value="3">Rabiul Awal</option>
+                <option value="4">Rabiul Akhir</option>
+                <option value="5">Jumadil Awal</option>
+                <option value="6">Jumadil Akhir</option>
+                <option value="7">Rajab</option>
+                <option value="8">Syaban</option>
+                <option value="9">Ramadan</option>
+                <option value="10">Syawal</option>
+                <option value="11">Dzulkaidah</option>
+                <option value="12" selected>Dzulhijjah</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="tahunHijriah">Tahun Hijriah (H):</label>
+            <input type="number" id="tahunHijriah" value="1447" min="1" max="5000" placeholder="Contoh: 1448" />
+        </div>
+
+        <div class="form-group full">
+            <label for="modePenetapan">Mode Perhitungan:</label>
+            <select id="modePenetapan">
+                <option value="kalender">Ikuti Kalender Acuan / Kalender Umum</option>
+                <option value="rukyat_terlihat" selected>Simulasi Rukyat: Hilal Terlihat pada Hari ke-29</option>
+                <option value="rukyat_tidak_terlihat">Simulasi Rukyat: Hilal Tidak Terlihat / Istikmal 30 Hari</option>
+            </select>
+        </div>
+    </div>
+
+    <button onclick="prosesKalender()">Hitung Tanggal dengan Benar</button>
+
+    <div id="resultBox" class="result-box">
+        <div class="result-title" id="resTitle">
+            <span>🪐</span> Hasil Analisis Kalender
+        </div>
+
+        <div class="result-grid">
+            <div class="result-item">
+                <span class="label">🌙 Awal Bulan Terpilih:</span>
+                <div id="resAwal" class="date-display"></div>
+            </div>
+            <div class="result-item">
+                <span class="label">📆 Akhir Bulan Terpilih:</span>
+                <div id="resAkhir" class="date-display"></div>
+            </div>
+            <div class="result-item">
+                <span class="label">🌙 Awal Bulan Berikutnya:</span>
+                <div id="resAwalDepan" class="date-display"></div>
+            </div>
+            <div class="result-item">
+                <span class="label">🧮 Umur Bulan:</span>
+                <div id="resUmur" class="date-display"></div>
+            </div>
+        </div>
+
+        <div class="conclusion-box">
+            <div class="conclusion-title">
+                <span>✅</span> Ringkasan Hasil:
+            </div>
+            <div id="resKesimpulan" class="conclusion-text"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+const namaBulanHijriah = [
+    "Muharram", "Safar", "Rabiul Awal", "Rabiul Akhir",
+    "Jumadil Awal", "Jumadil Akhir", "Rajab", "Syaban",
+    "Ramadan", "Syawal", "Dzulkaidah", "Dzulhijjah"
+];
+
+const namaHari = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
+const namaBulanMasehi = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+
+/*
+    Rujukan pasaran:
+    16 Juni 2026 = Selasa Wage.
+    Urutan pasaran setelah Wage adalah Kliwon, Legi, Pahing, Pon.
+*/
+const pasaranJawa = ["Wage", "Kliwon", "Legi", "Pahing", "Pon"];
+const refPasaranUTC = Date.UTC(2026, 5, 16); // 16 Juni 2026, Selasa Wage
+
+let memakaiFallbackTabular = false;
+
+function addDaysUTC(dateObj, jumlahHari) {
+    return new Date(Date.UTC(
+        dateObj.getUTCFullYear(),
+        dateObj.getUTCMonth(),
+        dateObj.getUTCDate() + jumlahHari
+    ));
+}
+
+function diffDaysUTC(dateA, dateB) {
+    const a = Date.UTC(dateA.getUTCFullYear(), dateA.getUTCMonth(), dateA.getUTCDate());
+    const b = Date.UTC(dateB.getUTCFullYear(), dateB.getUTCMonth(), dateB.getUTCDate());
+    return Math.round((b - a) / 86400000);
+}
+
+function getTanggalLengkapJawa(dateObj) {
+    const targetUTC = Date.UTC(dateObj.getUTCFullYear(), dateObj.getUTCMonth(), dateObj.getUTCDate());
+    const diff = Math.round((targetUTC - refPasaranUTC) / 86400000);
+
+    let idxPasaran = diff % 5;
+    if (idxPasaran < 0) idxPasaran += 5;
+
+    const hari = namaHari[dateObj.getUTCDay()];
+    const pasaran = pasaranJawa[idxPasaran];
+    const tanggal = dateObj.getUTCDate();
+    const bulan = namaBulanMasehi[dateObj.getUTCMonth()];
+    const tahun = dateObj.getUTCFullYear();
+
+    return `${hari} ${pasaran}, ${tanggal} ${bulan} ${tahun}`;
+}
+
+function getFormatterHijriah() {
+    const kandidatLocale = [
+        "id-ID-u-ca-islamic-umalqura-nu-latn",
+        "en-TN-u-ca-islamic-umalqura-nu-latn",
+        "en-u-ca-islamic-umalqura-nu-latn",
+        "en-u-ca-islamic-nu-latn"
+    ];
+
+    for (const locale of kandidatLocale) {
+        try {
+            const formatter = new Intl.DateTimeFormat(locale, {
+                timeZone: "UTC",
+                day: "numeric",
+                month: "numeric",
+                year: "numeric"
+            });
+
+            const parts = formatter.formatToParts(new Date(Date.UTC(2026, 5, 16)));
+            const yearPart = parts.find(p => p.type === "year");
+            const monthPart = parts.find(p => p.type === "month");
+            const dayPart = parts.find(p => p.type === "day");
+
+            if (yearPart && monthPart && dayPart) return formatter;
+        } catch (error) {
+            // lanjut mencoba locale berikutnya
+        }
+    }
+
+    return null;
+}
+
+const formatterHijriah = getFormatterHijriah();
+
+function getHijriParts(dateObj) {
+    if (!formatterHijriah) return null;
+
+    const parts = formatterHijriah.formatToParts(dateObj);
+    const data = {};
+
+    for (const part of parts) {
+        if (part.type === "day") data.day = parseInt(part.value, 10);
+        if (part.type === "month") data.month = parseInt(part.value, 10);
+        if (part.type === "year") data.year = parseInt(part.value, 10);
+    }
+
+    if (!data.day || !data.month || !data.year) return null;
+    return data;
+}
+
+/*
+    Fallback aritmetika hanya dipakai jika browser tidak mendukung kalender Hijriah Intl.
+    Konstanta 1948438 dipakai agar 1 Muharram 1448 H jatuh pada 16 Juni 2026 pada pendekatan tabular.
+*/
+function hijriToJdnTabular(year, month, day) {
+    return Math.floor((11 * year + 3) / 30) + 354 * (year - 1) + Math.ceil(29.5 * (month - 1)) + day + 1948438;
+}
+
+function jdnToGregorianUTC(jdn) {
+    let l = jdn + 68569;
+    const n = Math.floor((4 * l) / 146097);
+    l = l - Math.floor((146097 * n + 3) / 4);
+    const i = Math.floor((4000 * (l + 1)) / 1461001);
+    l = l - Math.floor((1461 * i) / 4) + 31;
+    const j = Math.floor((80 * l) / 2447);
+    const day = l - Math.floor((2447 * j) / 80);
+    l = Math.floor(j / 11);
+    const month = j + 2 - 12 * l;
+    const year = 100 * (n - 49) + i + l;
+
+    return new Date(Date.UTC(year, month - 1, day));
+}
+
+function findGregorianFromHijri(year, month, day) {
+    const approx = jdnToGregorianUTC(hijriToJdnTabular(year, month, day));
+
+    if (formatterHijriah) {
+        for (let offset = -12; offset <= 12; offset++) {
+            const kandidat = addDaysUTC(approx, offset);
+            const h = getHijriParts(kandidat);
+
+            if (h && h.year === year && h.month === month && h.day === day) {
+                return kandidat;
+            }
+        }
+    }
+
+    memakaiFallbackTabular = true;
+    return approx;
+}
+
+function getBulanBerikutnya(month, year) {
+    if (month === 12) return { month: 1, year: year + 1 };
+    return { month: month + 1, year };
+}
+
+function renderError(message) {
+    const resultBox = document.getElementById("resultBox");
+    document.getElementById("resTitle").innerHTML = `<span>⚠️</span> Input Tidak Valid`;
+    document.getElementById("resAwal").innerHTML = `<span class="status-error">${message}</span>`;
+    document.getElementById("resAkhir").innerHTML = "-";
+    document.getElementById("resAwalDepan").innerHTML = "-";
+    document.getElementById("resStatusTanggal").innerHTML = "-";
+    document.getElementById("resUmur").innerHTML = "-";
+    document.getElementById("resKesimpulan").innerHTML = "Periksa kembali bulan, tahun, dan mode perhitungan yang dipilih.";
+    resultBox.style.display = "block";
+}
+
+function prosesKalender() {
+    memakaiFallbackTabular = false;
+
+    const bulan = parseInt(document.getElementById("bulanHijriah").value, 10);
+    const tahun = parseInt(document.getElementById("tahunHijriah").value, 10);
+    const mode = document.getElementById("modePenetapan").value;
+
+    if (isNaN(tahun) || tahun < 1 || tahun > 5000) {
+        renderError("Mohon masukkan tahun Hijriah yang valid antara 1 sampai 5000.");
+        return;
+    }
+
+    const namaBulan = namaBulanHijriah[bulan - 1];
+    const bulanDepan = getBulanBerikutnya(bulan, tahun);
+    const namaBulanDepan = namaBulanHijriah[bulanDepan.month - 1];
+
+    const awalBulan = findGregorianFromHijri(tahun, bulan, 1);
+    const hasilRukyatTerlihatHari29 = addDaysUTC(awalBulan, 29);
+    const hasilIstikmalHari30 = addDaysUTC(hasilRukyatTerlihatHari29, 1);
+
+    let awalBulanDepanAcuan = findGregorianFromHijri(bulanDepan.year, bulanDepan.month, 1);
+    let akhirBulan = addDaysUTC(awalBulanDepanAcuan, -1);
+    let awalBulanDepan = awalBulanDepanAcuan;
+    let umurBulan = diffDaysUTC(awalBulan, awalBulanDepan);
+    let tanggalAkhirHijriah = umurBulan;
+    let dasarPenetapan = "Kalender umum: akhir bulan dihitung satu hari sebelum tanggal 1 bulan berikutnya.";
+
+    if (mode === "kalender") {
+        if (umurBulan !== 29 && umurBulan !== 30) {
+            renderError("Data kalender acuan menghasilkan umur bulan yang tidak wajar. Umur bulan Hijriah seharusnya 29 atau 30 hari. Silakan gunakan mode simulasi rukyat.");
+            return;
+        }
+
+        tanggalAkhirHijriah = umurBulan;
+    }
+
+    if (mode === "rukyat_terlihat") {
+        akhirBulan = hasilRukyatTerlihatHari29;
+        awalBulanDepan = addDaysUTC(hasilRukyatTerlihatHari29, 1);
+        umurBulan = 29;
+        tanggalAkhirHijriah = 29;
+        dasarPenetapan = "Simulasi rukyat: hilal terlihat pada hari ke-29, sehingga bulan berjalan berumur 29 hari.";
+    }
+
+    if (mode === "rukyat_tidak_terlihat") {
+        akhirBulan = hasilIstikmalHari30;
+        awalBulanDepan = addDaysUTC(hasilIstikmalHari30, 1);
+        umurBulan = 30;
+        tanggalAkhirHijriah = 30;
+        dasarPenetapan = "Simulasi rukyat: hilal tidak terlihat, sehingga bulan berjalan diistikmalkan menjadi 30 hari.";
+    }
+
+    const teksAwal = getTanggalLengkapJawa(awalBulan);
+    const teksAkhir = getTanggalLengkapJawa(akhirBulan);
+    const teksAwalDepan = getTanggalLengkapJawa(awalBulanDepan);
+
+    document.getElementById("resTitle").innerHTML = `🪐 Hasil Kalender Bulan ${namaBulan} ${tahun} H`;
+
+    document.getElementById("resAwal").innerHTML = `
+        <strong>${teksAwal}</strong><br>
+        <small>1 ${namaBulan} ${tahun} H</small>
+    `;
+
+    document.getElementById("resAkhir").innerHTML = `
+        <strong>${teksAkhir}</strong><br>
+        <small>${tanggalAkhirHijriah} ${namaBulan} ${tahun} H</small>
+    `;
+
+    document.getElementById("resAwalDepan").innerHTML = `
+        <strong>${teksAwalDepan}</strong><br>
+        <small>1 ${namaBulanDepan} ${bulanDepan.year} H</small>
+    `;
+
+    document.getElementById("resUmur").innerHTML = `<strong>${umurBulan} hari</strong>`;
+
+    const catatanFallback = memakaiFallbackTabular
+        ? `<br><br><span class="status-warn">Catatan:</span> Browser ini tidak mendukung kalender Hijriah Intl secara penuh, sehingga sistem memakai fallback aritmetika tabular. Untuk hasil resmi, cocokkan kembali dengan data keputusan pemerintah atau data rukyat setempat.`
+        : "";
+
+    document.getElementById("resKesimpulan").innerHTML = `
+        Awal bulan <strong>${namaBulan} ${tahun} H</strong> jatuh pada <strong>${teksAwal}</strong>.
+        Akhir bulan <strong>${namaBulan} ${tahun} H</strong> jatuh pada <strong>${teksAkhir}</strong>
+        sebagai tanggal <strong>${tanggalAkhirHijriah} ${namaBulan} ${tahun} H</strong>.
+        Dengan demikian, tanggal <strong>1 ${namaBulanDepan} ${bulanDepan.year} H</strong> dimulai pada <strong>${teksAwalDepan}</strong>.
+        ${catatanFallback}
+    `;
+
+    document.getElementById("resultBox").style.display = "block";
+}
+
+// Tampilkan hasil awal saat halaman dibuka agar langsung bisa dicek.
+window.addEventListener("DOMContentLoaded", prosesKalender);
+</script>
+
+</body>
+</html>
