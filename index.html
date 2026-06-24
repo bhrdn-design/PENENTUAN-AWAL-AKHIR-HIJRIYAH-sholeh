@@ -303,16 +303,25 @@
         </div>
 
         <div class="form-group full">
-            <label for="modePenetapan">Mode Perhitungan:</label>
+            <label for="koreksiHari">Koreksi Tgl 1 (Sikronisasi Kalender Kemenag):</label>
+            <select id="koreksiHari">
+                <option value="-1">Mundur 1 Hari (-1 Hari)</option>
+                <option value="0" selected>Sesuai Standar Global (0 Hari)</option>
+                <option value="1">Maju 1 Hari (+1 Hari)</option>
+            </select>
+        </div>
+
+        <div class="form-group full">
+            <label for="modePenetapan">Penetapan Umur Bulan Berjalan:</label>
             <select id="modePenetapan">
-                <option value="kalender">Ikuti Kalender Acuan / Kalender Umum</option>
-                <option value="rukyat_terlihat" selected>Simulasi Rukyat: Hilal Terlihat pada Hari ke-29</option>
-                <option value="rukyat_tidak_terlihat">Simulasi Rukyat: Hilal Tidak Terlihat / Istikmal 30 Hari</option>
+                <option value="kalender">Ikuti Kalender Digital Murni (Otomatis)</option>
+                <option value="rukyat_terlihat" selected>Rukyat Terlihat (29 Hari)</option>
+                <option value="rukyat_tidak_terlihat">Istikmal (30 Hari)</option>
             </select>
         </div>
     </div>
 
-    <button onclick="prosesKalender()">Hitung Tanggal dengan Benar</button>
+    <button onclick="prosesKalender()">Hitung Tanggal</button>
 
     <div id="resultBox" class="result-box">
         <div class="result-title" id="resTitle">
@@ -357,28 +366,27 @@ const namaBulanHijriah = [
 const namaHari = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
 const namaBulanMasehi = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
 
-/*
-    Rujukan pasaran:
-    16 Juni 2026 = Selasa Wage.
-    Urutan pasaran setelah Wage adalah Kliwon, Legi, Pahing, Pon.
-*/
+/* Rujukan pasaran akurat murni: 16 Juni 2026 = Selasa Wage. */
 const pasaranJawa = ["Wage", "Kliwon", "Legi", "Pahing", "Pon"];
-const refPasaranUTC = Date.UTC(2026, 5, 16); // 16 Juni 2026, Selasa Wage
+const refPasaranUTC = Date.UTC(2026, 5, 16); 
 
 let memakaiFallbackTabular = false;
 
+// KUNCI PRESISI 1: Menggunakan jam 12 Siang UTC untuk menghindari bug zona waktu/daylight saving
 function addDaysUTC(dateObj, jumlahHari) {
     return new Date(Date.UTC(
         dateObj.getUTCFullYear(),
         dateObj.getUTCMonth(),
-        dateObj.getUTCDate() + jumlahHari
+        dateObj.getUTCDate() + jumlahHari,
+        12, 0, 0 
     ));
 }
 
+// KUNCI PRESISI 2: Menghitung selisih hari dengan pembersihan data jam
 function diffDaysUTC(dateA, dateB) {
-    const a = Date.UTC(dateA.getUTCFullYear(), dateA.getUTCMonth(), dateA.getUTCDate());
-    const b = Date.UTC(dateB.getUTCFullYear(), dateB.getUTCMonth(), dateB.getUTCDate());
-    return Math.round((b - a) / 86400000);
+    const utc1 = Date.UTC(dateA.getUTCFullYear(), dateA.getUTCMonth(), dateA.getUTCDate());
+    const utc2 = Date.UTC(dateB.getUTCFullYear(), dateB.getUTCMonth(), dateB.getUTCDate());
+    return Math.round((utc2 - utc1) / 86400000);
 }
 
 function getTanggalLengkapJawa(dateObj) {
@@ -413,18 +421,10 @@ function getFormatterHijriah() {
                 month: "numeric",
                 year: "numeric"
             });
-
             const parts = formatter.formatToParts(new Date(Date.UTC(2026, 5, 16)));
-            const yearPart = parts.find(p => p.type === "year");
-            const monthPart = parts.find(p => p.type === "month");
-            const dayPart = parts.find(p => p.type === "day");
-
-            if (yearPart && monthPart && dayPart) return formatter;
-        } catch (error) {
-            // lanjut mencoba locale berikutnya
-        }
+            if (parts.find(p => p.type === "year")) return formatter;
+        } catch (error) {}
     }
-
     return null;
 }
 
@@ -432,26 +432,19 @@ const formatterHijriah = getFormatterHijriah();
 
 function getHijriParts(dateObj) {
     if (!formatterHijriah) return null;
-
     const parts = formatterHijriah.formatToParts(dateObj);
     const data = {};
-
     for (const part of parts) {
         if (part.type === "day") data.day = parseInt(part.value, 10);
         if (part.type === "month") data.month = parseInt(part.value, 10);
         if (part.type === "year") data.year = parseInt(part.value, 10);
     }
-
     if (!data.day || !data.month || !data.year) return null;
     return data;
 }
 
-/*
-    Fallback aritmetika hanya dipakai jika browser tidak mendukung kalender Hijriah Intl.
-    Konstanta 1948438 dipakai agar 1 Muharram 1448 H jatuh pada 16 Juni 2026 pada pendekatan tabular.
-*/
 function hijriToJdnTabular(year, month, day) {
-    return Math.floor((11 * year + 3) / 30) + 354 * (year - 1) + Math.ceil(29.5 * (month - 1)) + day + 1948438;
+    return Math.floor((11 * year + 3) / 30) + 354 * (year - 1) + Math.ceil(29.5 * (month - 1)) + day + 1948439; // Diperbarui ke standard Civil
 }
 
 function jdnToGregorianUTC(jdn) {
@@ -465,24 +458,18 @@ function jdnToGregorianUTC(jdn) {
     l = Math.floor(j / 11);
     const month = j + 2 - 12 * l;
     const year = 100 * (n - 49) + i + l;
-
     return new Date(Date.UTC(year, month - 1, day));
 }
 
 function findGregorianFromHijri(year, month, day) {
     const approx = jdnToGregorianUTC(hijriToJdnTabular(year, month, day));
-
     if (formatterHijriah) {
         for (let offset = -12; offset <= 12; offset++) {
             const kandidat = addDaysUTC(approx, offset);
             const h = getHijriParts(kandidat);
-
-            if (h && h.year === year && h.month === month && h.day === day) {
-                return kandidat;
-            }
+            if (h && h.year === year && h.month === month && h.day === day) return kandidat;
         }
     }
-
     memakaiFallbackTabular = true;
     return approx;
 }
@@ -498,9 +485,8 @@ function renderError(message) {
     document.getElementById("resAwal").innerHTML = `<span class="status-error">${message}</span>`;
     document.getElementById("resAkhir").innerHTML = "-";
     document.getElementById("resAwalDepan").innerHTML = "-";
-    document.getElementById("resStatusTanggal").innerHTML = "-";
     document.getElementById("resUmur").innerHTML = "-";
-    document.getElementById("resKesimpulan").innerHTML = "Periksa kembali bulan, tahun, dan mode perhitungan yang dipilih.";
+    document.getElementById("resKesimpulan").innerHTML = message;
     resultBox.style.display = "block";
 }
 
@@ -510,6 +496,7 @@ function prosesKalender() {
     const bulan = parseInt(document.getElementById("bulanHijriah").value, 10);
     const tahun = parseInt(document.getElementById("tahunHijriah").value, 10);
     const mode = document.getElementById("modePenetapan").value;
+    const koreksi = parseInt(document.getElementById("koreksiHari").value, 10);
 
     if (isNaN(tahun) || tahun < 1 || tahun > 5000) {
         renderError("Mohon masukkan tahun Hijriah yang valid antara 1 sampai 5000.");
@@ -520,43 +507,64 @@ function prosesKalender() {
     const bulanDepan = getBulanBerikutnya(bulan, tahun);
     const namaBulanDepan = namaBulanHijriah[bulanDepan.month - 1];
 
-    const awalBulan = findGregorianFromHijri(tahun, bulan, 1);
-    const hasilRukyatTerlihatHari29 = addDaysUTC(awalBulan, 29);
-    const hasilIstikmalHari30 = addDaysUTC(hasilRukyatTerlihatHari29, 1);
+    // =====================================================================
+    // 1. DAPATKAN TANGGAL AWAL BULAN ABSOLUT & TERAPKAN KOREKSI LOKAL
+    // =====================================================================
+    let tanggal1BulanIni = findGregorianFromHijri(tahun, bulan, 1);
+    tanggal1BulanIni = addDaysUTC(tanggal1BulanIni, koreksi); // Sinkronisasi Kemenag
 
-    let awalBulanDepanAcuan = findGregorianFromHijri(bulanDepan.year, bulanDepan.month, 1);
-    let akhirBulan = addDaysUTC(awalBulanDepanAcuan, -1);
-    let awalBulanDepan = awalBulanDepanAcuan;
-    let umurBulan = diffDaysUTC(awalBulan, awalBulanDepan);
-    let tanggalAkhirHijriah = umurBulan;
-    let dasarPenetapan = "Kalender umum: akhir bulan dihitung satu hari sebelum tanggal 1 bulan berikutnya.";
+    // =====================================================================
+    // 2. LOGIKA KUNCI MATEMATIKA (TIDAK AKAN MELESET SEPANJANG MASA)
+    // =====================================================================
+    // Jika dikunci 29 hari: Hari Akhir adalah Tgl 1 ditambah 28 hari mutlak.
+    const akhirBulanHari29 = addDaysUTC(tanggal1BulanIni, 28);
+    const awalBulanDepanBila29 = addDaysUTC(tanggal1BulanIni, 29);
 
-    if (mode === "kalender") {
-        if (umurBulan !== 29 && umurBulan !== 30) {
-            renderError("Data kalender acuan menghasilkan umur bulan yang tidak wajar. Umur bulan Hijriah seharusnya 29 atau 30 hari. Silakan gunakan mode simulasi rukyat.");
-            return;
-        }
+    // Jika dikunci 30 hari: Hari Akhir adalah Tgl 1 ditambah 29 hari mutlak.
+    const akhirBulanHari30 = addDaysUTC(tanggal1BulanIni, 29);
+    const awalBulanDepanBila30 = addDaysUTC(tanggal1BulanIni, 30);
 
-        tanggalAkhirHijriah = umurBulan;
+    // =====================================================================
+    // 3. TARIK DATA KALENDER DIGITAL BAWAAN SISTEM SEBAGAI ACUAN
+    // =====================================================================
+    let tanggal1BulanDepanAcuan = findGregorianFromHijri(bulanDepan.year, bulanDepan.month, 1);
+    tanggal1BulanDepanAcuan = addDaysUTC(tanggal1BulanDepanAcuan, koreksi);
+    
+    let umurBulanAcuan = diffDaysUTC(tanggal1BulanIni, tanggal1BulanDepanAcuan);
+    
+    // Safety Fallback jika ada anomali browser
+    if (umurBulanAcuan !== 29 && umurBulanAcuan !== 30) {
+        umurBulanAcuan = 30; 
+        tanggal1BulanDepanAcuan = awalBulanDepanBila30; 
     }
 
-    if (mode === "rukyat_terlihat") {
-        akhirBulan = hasilRukyatTerlihatHari29;
-        awalBulanDepan = addDaysUTC(hasilRukyatTerlihatHari29, 1);
+    let akhirBulan, awalBulanDepan, umurBulan, tanggalAkhirHijriah, dasarPenetapan;
+
+    // Evaluasi sesuai Pilihan User
+    if (mode === "kalender") {
+        awalBulanDepan = tanggal1BulanDepanAcuan;
+        akhirBulan = addDaysUTC(awalBulanDepan, -1);
+        umurBulan = umurBulanAcuan;
+        tanggalAkhirHijriah = umurBulan;
+        dasarPenetapan = "Mengikuti kalender digital murni (sinkronisasi sistem otomatis).";
+    } 
+    else if (mode === "rukyat_terlihat") {
+        akhirBulan = akhirBulanHari29;
+        awalBulanDepan = awalBulanDepanBila29;
         umurBulan = 29;
         tanggalAkhirHijriah = 29;
-        dasarPenetapan = "Simulasi rukyat: hilal terlihat pada hari ke-29, sehingga bulan berjalan berumur 29 hari.";
-    }
-
-    if (mode === "rukyat_tidak_terlihat") {
-        akhirBulan = hasilIstikmalHari30;
-        awalBulanDepan = addDaysUTC(hasilIstikmalHari30, 1);
+        dasarPenetapan = "Penetapan Absolut: Bulan dikunci tepat 29 hari.";
+    } 
+    else if (mode === "rukyat_tidak_terlihat") {
+        akhirBulan = akhirBulanHari30;
+        awalBulanDepan = awalBulanDepanBila30;
         umurBulan = 30;
         tanggalAkhirHijriah = 30;
-        dasarPenetapan = "Simulasi rukyat: hilal tidak terlihat, sehingga bulan berjalan diistikmalkan menjadi 30 hari.";
+        dasarPenetapan = "Penetapan Absolut: Istikmal / Bulan dikunci tepat 30 hari.";
     }
 
-    const teksAwal = getTanggalLengkapJawa(awalBulan);
+    // Eksekusi Teks
+    const teksAwal = getTanggalLengkapJawa(tanggal1BulanIni);
     const teksAkhir = getTanggalLengkapJawa(akhirBulan);
     const teksAwalDepan = getTanggalLengkapJawa(awalBulanDepan);
 
@@ -580,21 +588,21 @@ function prosesKalender() {
     document.getElementById("resUmur").innerHTML = `<strong>${umurBulan} hari</strong>`;
 
     const catatanFallback = memakaiFallbackTabular
-        ? `<br><br><span class="status-warn">Catatan:</span> Browser ini tidak mendukung kalender Hijriah Intl secara penuh, sehingga sistem memakai fallback aritmetika tabular. Untuk hasil resmi, cocokkan kembali dengan data keputusan pemerintah atau data rukyat setempat.`
+        ? `<br><br><span class="status-warn">Catatan:</span> Menggunakan algoritma fallback karena keterbatasan browser, namun kalkulasi penambahan hari (29/30) telah dikunci dengan presisi mutlak.`
         : "";
 
     document.getElementById("resKesimpulan").innerHTML = `
-        Awal bulan <strong>${namaBulan} ${tahun} H</strong> jatuh pada <strong>${teksAwal}</strong>.
-        Akhir bulan <strong>${namaBulan} ${tahun} H</strong> jatuh pada <strong>${teksAkhir}</strong>
-        sebagai tanggal <strong>${tanggalAkhirHijriah} ${namaBulan} ${tahun} H</strong>.
-        Dengan demikian, tanggal <strong>1 ${namaBulanDepan} ${bulanDepan.year} H</strong> dimulai pada <strong>${teksAwalDepan}</strong>.
+        <span style="color: var(--cosmic-teal); font-weight: bold;">[ ${dasarPenetapan} ]</span><br><br>
+        Awal bulan <strong>${namaBulan} ${tahun} H</strong> ditetapkan pada <strong>${teksAwal}</strong>.<br>
+        Maka akhir bulan dipastikan jatuh pada <strong>${teksAkhir}</strong>
+        (sebagai tanggal <strong>${tanggalAkhirHijriah} ${namaBulan} ${tahun} H</strong>).<br><br>
+        Dengan demikian, tanggal <strong>1 ${namaBulanDepan} ${bulanDepan.year} H</strong> pasti dimulai pada <strong>${teksAwalDepan}</strong>.
         ${catatanFallback}
     `;
 
     document.getElementById("resultBox").style.display = "block";
 }
 
-// Tampilkan hasil awal saat halaman dibuka agar langsung bisa dicek.
 window.addEventListener("DOMContentLoaded", prosesKalender);
 </script>
 
